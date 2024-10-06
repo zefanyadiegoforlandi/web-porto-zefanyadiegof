@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pemantauan Kondisi Sensor</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body class="bg-gray-100 flex flex-col min-h-screen">
+
+    <!-- Header -->
+    <header class="bg-yellow-500 p-4 flex justify-between items-center">
+        <h1 class="text-white text-3xl font-bold">Sistem Pemantauan Sensor</h1>
+        <nav>
+            <ul class="flex space-x-8">
+                <li class="group">
+                    <a href="../index.html" class="py-2 text-base text-white group-hover:text-black">Beranda</a>
+                </li>
+            </ul>
+        </nav>
+    </header>
+    
+    
+    
+    
+
+    <!-- Container utama -->
+    <div class="flex flex-1">
+        
+        <!-- Sidebar -->
+        <div class="w-1/6 bg-yellow-300 p-4 h-full">
+            <h2 class="text-gray-800 text-xl font-semibold mb-4">Navigasi</h2>
+            <ul>
+                <li class="text-gray-800 py-2 hover:bg-yellow-400 rounded"><a href="#" class="block px-4">Dashboard</a></li>
+                <li class="text-gray-800 py-2 hover:bg-yellow-400 rounded"><a href="#" class="block px-4">Data Sensor</a></li>
+                <li class="text-gray-800 py-2 hover:bg-yellow-400 rounded"><a href="#" class="block px-4">Pengaturan</a></li>
+            </ul>
+        </div>
+
+        <!-- Konten Utama -->
+        <div class="w-5/6 p-6">
+            <div class="flex justify-between items-center mb-8">
+                <h2 class="text-4xl font-semibold text-gray-800">Pemantauan Kondisi Sensor</h2>
+            </div>
+
+            <!-- Grid grafik -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                
+                <!-- Grafik Suhu (Temperature) -->
+                <div class="bg-white p-4 rounded-lg shadow-lg">
+                    <h3 class="text-lg font-semibold text-gray-700 mb-4">Grafik Suhu</h3>
+                    <canvas id="temperatureChart"></canvas>
+                </div>
+
+                <!-- Grafik Kelembaban (Humidity) -->
+                <div class="bg-white p-4 rounded-lg shadow-lg">
+                    <h3 class="text-lg font-semibold text-gray-700 mb-4">Grafik Kelembaban</h3>
+                    <canvas id="humidityChart"></canvas>
+                </div>
+
+                <!-- Grafik Tekanan Udara (Pressure) -->
+                <div class="bg-white p-4 rounded-lg shadow-lg">
+                    <h3 class="text-lg font-semibold text-gray-700 mb-4">Grafik Tekanan Udara</h3>
+                    <canvas id="pressureChart"></canvas>
+                </div>
+
+                <!-- Grafik Ketinggian (Altitude) -->
+                <div class="bg-white p-4 rounded-lg shadow-lg">
+                    <h3 class="text-lg font-semibold text-gray-700 mb-4">Grafik Ketinggian</h3>
+                    <canvas id="altitudeChart"></canvas>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="bg-yellow-500 text-white p-4 text-center mt-auto">
+        &copy; 2024 Pemantauan Sensor. All Rights Reserved. Sejak 06/10/2024
+    </footer>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            let temperatureChart, humidityChart, pressureChart, altitudeChart;
+            let temperatureData = [];
+            let humidityData = [];
+            let pressureData = [];
+            let altitudeData = [];
+            let labels = [];
+            let lastFetchedTimestamp = null; // Menyimpan timestamp terakhir yang diambil
+    
+            // Setup chart instances
+            function initializeCharts() {
+                const temperatureCtx = document.getElementById('temperatureChart').getContext('2d');
+                const humidityCtx = document.getElementById('humidityChart').getContext('2d');
+                const pressureCtx = document.getElementById('pressureChart').getContext('2d');
+                const altitudeCtx = document.getElementById('altitudeChart').getContext('2d');
+    
+                temperatureChart = new Chart(temperatureCtx, {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: 'Temperature (°C)',
+                            data: temperatureData,
+                            borderColor: 'rgba(255, 99, 132, 1)',
+                            backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                            borderWidth: 2,
+                            tension: 0.4
+                        }]
+                    }
+                });
+    
+                humidityChart = new Chart(humidityCtx, {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: 'Humidity (%)',
+                            data: humidityData,
+                            borderColor: 'rgba(54, 162, 235, 1)',
+                            backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                            borderWidth: 2,
+                            tension: 0.4
+                        }]
+                    }
+                });
+    
+                pressureChart = new Chart(pressureCtx, {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: 'Pressure (hPa)',
+                            data: pressureData,
+                            borderColor: 'rgba(75, 192, 192, 1)',
+                            backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                            borderWidth: 2,
+                            tension: 0.4
+                        }]
+                    }
+                });
+    
+                altitudeChart = new Chart(altitudeCtx, {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: 'Altitude (m)',
+                            data: altitudeData,
+                            borderColor: 'rgba(153, 102, 255, 1)',
+                            backgroundColor: 'rgba(153, 102, 255, 0.2)',
+                            borderWidth: 2,
+                            tension: 0.4
+                        }]
+                    }
+                });
+            }
+    
+            // Fungsi untuk memperbarui data di setiap grafik
+            function updateCharts() {
+                temperatureChart.update();
+                humidityChart.update();
+                pressureChart.update();
+                altitudeChart.update();
+            }
+    
+            // Fungsi untuk mengambil data dari API
+            async function fetchSensorData() {
+                try {
+                    const response = await fetch('http://athe.my.id:8080/api/sensordata');
+                    const sensorData = await response.json();
+    
+                    // Ambil 10 data terbaru
+                    if (labels.length < 10) {
+                        const latestData = sensorData.slice(-10); // Ambil 10 data terbaru
+                        latestData.forEach(data => {
+                            labels.push(data.created_at);
+                            temperatureData.push(data.temperature);
+                            humidityData.push(data.humidity);
+                            pressureData.push(data.pressure);
+                            altitudeData.push(data.altitude);
+                        });
+    
+                        // Set timestamp terakhir diambil
+                        lastFetchedTimestamp = latestData[latestData.length - 1].created_at;
+                    } else {
+                        // Ambil satu data terbaru jika ada yang baru
+                        const newData = sensorData.filter(data => data.created_at > lastFetchedTimestamp);
+                        if (newData.length > 0) {
+                            const latestNewData = newData.slice(-1)[0]; // Ambil data terbaru
+                            labels.push(latestNewData.created_at);
+                            temperatureData.push(latestNewData.temperature);
+                            humidityData.push(latestNewData.humidity);
+                            pressureData.push(latestNewData.pressure);
+                            altitudeData.push(latestNewData.altitude);
+    
+                            // Update timestamp terakhir diambil
+                            lastFetchedTimestamp = latestNewData.created_at;
+                        }
+                    }
+    
+                    // Simpan maksimal 10 data saja di grafik
+                    if (labels.length > 10) {
+                        labels.shift();
+                        temperatureData.shift();
+                        humidityData.shift();
+                        pressureData.shift();
+                        altitudeData.shift();
+                    }
+    
+                    updateCharts(); // Perbarui grafik dengan data terbaru
+                } catch (error) {
+                    console.error('Gagal mengambil data sensor:', error);
+                }
+            }
+    
+            initializeCharts(); // Inisialisasi grafik
+            fetchSensorData(); // Ambil data pertama kali
+    
+            // Ambil data secara berkala setiap 2 detik
+            setInterval(fetchSensorData, 2000);
+        });
+    </script>
+    
+
+</body>
+</html>
