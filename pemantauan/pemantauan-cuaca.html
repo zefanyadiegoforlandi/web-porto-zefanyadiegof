@@ -170,8 +170,15 @@
             async function fetchSensorData() {
                 try {
                     const response = await fetch('http://athe.my.id:8080/api/proxy/sensordata');
-                    const sensorData = await response.json();
-    
+                    const sensorDataResponse = await response.json();
+                    
+                    // Cek status respon
+                    if (sensorDataResponse.status !== "success") {
+                        console.error('Gagal mengambil data sensor:', sensorDataResponse.message);
+                        return;
+                    }
+
+                    const sensorData = sensorDataResponse.data; // Ambil data dari respons
                     // Ambil 10 data terbaru
                     if (labels.length < 10) {
                         const latestData = sensorData.slice(-10); // Ambil 10 data terbaru
