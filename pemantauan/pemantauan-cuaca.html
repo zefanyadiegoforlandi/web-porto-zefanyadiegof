@@ -169,7 +169,7 @@
             // Fungsi untuk mengambil data dari API
             async function fetchSensorData() {
                 try {
-                    const response = await fetch('http://athe.my.id:8080/api/sensordata');
+                    const response = await fetch('http://athe.my.id:8080/api/proxy/sensordata');
                     const sensorData = await response.json();
     
                     // Ambil 10 data terbaru
