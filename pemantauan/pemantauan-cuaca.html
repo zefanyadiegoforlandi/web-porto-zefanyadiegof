@@ -171,12 +171,6 @@
                 try {
                     const response = await fetch('https://athe.my.id:8443/api/sensordata');
                     const sensorDataResponse = await response.json();
-                    
-                    // Cek status respon
-                    if (sensorDataResponse.status !== "success") {
-                        console.error('Gagal mengambil data sensor:', sensorDataResponse.message);
-                        return;
-                    }
 
                     const sensorData = sensorDataResponse.data; // Ambil data dari respons
                     // Ambil 10 data terbaru
