@@ -20,10 +20,6 @@
             </ul>
         </nav>
     </header>
-    
-    
-    
-    
 
     <!-- Container utama -->
     <div class="flex flex-1">
@@ -59,6 +55,12 @@
                     <canvas id="humidityChart"></canvas>
                 </div>
 
+                <!-- Grafik Kualitas Udara (Air Quality) -->
+                <div class="bg-white p-4 rounded-lg shadow-lg">
+                    <h3 class="text-lg font-semibold text-gray-700 mb-4">Grafik Kualitas Udara</h3>
+                    <canvas id="airQualityChart"></canvas>
+                </div>
+
                 <!-- Grafik Tekanan Udara (Pressure) -->
                 <div class="bg-white p-4 rounded-lg shadow-lg">
                     <h3 class="text-lg font-semibold text-gray-700 mb-4">Grafik Tekanan Udara</h3>
@@ -70,7 +72,6 @@
                     <h3 class="text-lg font-semibold text-gray-700 mb-4">Grafik Ketinggian</h3>
                     <canvas id="altitudeChart"></canvas>
                 </div>
-
             </div>
         </div>
     </div>
@@ -82,9 +83,10 @@
 
     <script>
         document.addEventListener("DOMContentLoaded", function() {
-            let temperatureChart, humidityChart, pressureChart, altitudeChart;
+            let temperatureChart, humidityChart, airQualityChart, pressureChart, altitudeChart;
             let temperatureData = [];
             let humidityData = [];
+            let airQualityData = []; // Tambahkan array untuk kualitas udara
             let pressureData = [];
             let altitudeData = [];
             let labels = [];
@@ -94,6 +96,7 @@
             function initializeCharts() {
                 const temperatureCtx = document.getElementById('temperatureChart').getContext('2d');
                 const humidityCtx = document.getElementById('humidityChart').getContext('2d');
+                const airQualityCtx = document.getElementById('airQualityChart').getContext('2d'); // Untuk grafik kualitas udara
                 const pressureCtx = document.getElementById('pressureChart').getContext('2d');
                 const altitudeCtx = document.getElementById('altitudeChart').getContext('2d');
     
@@ -121,6 +124,22 @@
                             data: humidityData,
                             borderColor: 'rgba(54, 162, 235, 1)',
                             backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                            borderWidth: 2,
+                            tension: 0.4
+                        }]
+                    }
+                });
+
+                // Tambahkan grafik kualitas udara
+                airQualityChart = new Chart(airQualityCtx, {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: 'Air Quality',
+                            data: airQualityData,
+                            borderColor: 'rgba(255, 206, 86, 1)',
+                            backgroundColor: 'rgba(255, 206, 86, 0.2)',
                             borderWidth: 2,
                             tension: 0.4
                         }]
@@ -158,73 +177,82 @@
                 });
             }
     
-            // Fungsi untuk memperbarui data di setiap grafik
-            function updateCharts() {
-                temperatureChart.update();
-                humidityChart.update();
-                pressureChart.update();
-                altitudeChart.update();
-            }
-    
-            // Fungsi untuk mengambil data dari API
-            async function fetchSensorData() {
-                try {
-                    const response = await fetch('https://athe.my.id:8443/api/sensordata');
-                    const sensorDataResponse = await response.json();
+           // Fungsi untuk memperbarui data di setiap grafik
+        function updateCharts() {
+            temperatureChart.update();
+            humidityChart.update();
+            airQualityChart.update(); // Tambahkan untuk memperbarui grafik kualitas udara
+            pressureChart.update();
+            altitudeChart.update();
+        }
 
-                    const sensorData = sensorDataResponse.data; // Ambil data dari respons
-                    // Ambil 10 data terbaru
-                    if (labels.length < 10) {
+        async function fetchSensorData() {
+            try {
+                const response = await fetch('https://athe.my.id:8443/api/sensordata');
+                const sensorDataResponse = await response.json();
+        
+                const sensorData = sensorDataResponse.data; // Ambil data dari respons
+        
+                // Cek apakah ada data
+                if (sensorData.length > 0) {
+                    // Ambil 10 data terbaru jika labels masih kosong
+                    if (labels.length === 0) {
                         const latestData = sensorData.slice(-10); // Ambil 10 data terbaru
                         latestData.forEach(data => {
-                            labels.push(data.created_at);
+                            labels.push(data.post_date);
                             temperatureData.push(data.temperature);
                             humidityData.push(data.humidity);
+                            airQualityData.push(data.kualitas_udara);
                             pressureData.push(data.pressure);
                             altitudeData.push(data.altitude);
                         });
-    
-                        // Set timestamp terakhir diambil
-                        lastFetchedTimestamp = latestData[latestData.length - 1].created_at;
+                        updateCharts(); // Perbarui grafik dengan data awal
                     } else {
-                        // Ambil satu data terbaru jika ada yang baru
-                        const newData = sensorData.filter(data => data.created_at > lastFetchedTimestamp);
-                        if (newData.length > 0) {
-                            const latestNewData = newData.slice(-1)[0]; // Ambil data terbaru
-                            labels.push(latestNewData.created_at);
+                        const latestNewData = sensorData[sensorData.length - 1]; // Ambil data terbaru
+                        
+                        // Periksa apakah data terbaru lebih baru dari data terakhir yang diambil
+                        if (!lastFetchedTimestamp || latestNewData.post_date > lastFetchedTimestamp) {
+                            labels.push(latestNewData.post_date);
                             temperatureData.push(latestNewData.temperature);
                             humidityData.push(latestNewData.humidity);
+                            airQualityData.push(latestNewData.kualitas_udara);
                             pressureData.push(latestNewData.pressure);
                             altitudeData.push(latestNewData.altitude);
-    
+        
                             // Update timestamp terakhir diambil
-                            lastFetchedTimestamp = latestNewData.created_at;
+                            lastFetchedTimestamp = latestNewData.post_date;
+        
+                            // Hanya simpan maksimal 10 data di grafik
+                            if (labels.length > 10) {
+                                labels.shift();
+                                temperatureData.shift();
+                                humidityData.shift();
+                                airQualityData.shift();
+                                pressureData.shift();
+                                altitudeData.shift();
+                            }
+        
+                            updateCharts(); // Perbarui grafik dengan data terbaru
                         }
                     }
-    
-                    // Simpan maksimal 10 data saja di grafik
-                    if (labels.length > 10) {
-                        labels.shift();
-                        temperatureData.shift();
-                        humidityData.shift();
-                        pressureData.shift();
-                        altitudeData.shift();
-                    }
-    
-                    updateCharts(); // Perbarui grafik dengan data terbaru
-                } catch (error) {
-                    console.error('Gagal mengambil data sensor:', error);
                 }
+            } catch (error) {
+                console.error('Gagal mengambil data sensor:', error);
             }
-    
-            initializeCharts(); // Inisialisasi grafik
-            fetchSensorData(); // Ambil data pertama kali
-    
-            // Ambil data secara berkala setiap 2 detik
-            setInterval(fetchSensorData, 2000);
+        }
+        
+        // Inisialisasi grafik dan ambil data pertama kali
+        initializeCharts();
+        fetchSensorData(); // Ambil data pertama kali
+        
+        // Ambil data secara berkala setiap 5 detik
+        setInterval(fetchSensorData, 5000);
+        
+        
+
+
+
         });
     </script>
-    
-
 </body>
 </html>
