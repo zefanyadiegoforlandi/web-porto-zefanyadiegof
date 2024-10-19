@@ -169,7 +169,7 @@
             // Fungsi untuk mengambil data dari API
             async function fetchSensorData() {
                 try {
-                    const response = await fetch('https://athe.my.id:8443/api/proxy/sensordata');
+                    const response = await fetch('https://athe.my.id:8443/api/sensordata');
                     const sensorDataResponse = await response.json();
                     
                     // Cek status respon
